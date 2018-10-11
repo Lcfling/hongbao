@@ -1,8 +1,8 @@
 <?php
-class UsersModel extends CommonModel
+class RoomModel extends CommonModel
 {
     protected $pk = 'id';
-    protected $tableName = 'users';
+    protected $tableName = 'room';
 
 
     //获取房间信息
@@ -35,9 +35,9 @@ class UsersModel extends CommonModel
     }
 
     /**更新房间列表的缓存
-     * 
+     *
      */
-    public function updateroomlist(){
+    protected function updateroomlist(){
 
     }
 }
