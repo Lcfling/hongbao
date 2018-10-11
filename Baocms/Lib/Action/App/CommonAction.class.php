@@ -6,10 +6,12 @@ class CommonAction extends BaseAction {
 
     protected $token = '';
     protected $member = array();
+    public $redis=null;
 
     //初始化 验证登陆信息 开启跨域
     protected function _initialize()
     {
+        $this->initCache();
         header("Access-Control-Allow-Origin: *"); // 允许任意域名发起的跨域请求
         header('Access-Control-Allow-Methods:GET, POST');
         header('Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept');
@@ -23,7 +25,7 @@ class CommonAction extends BaseAction {
      * @param bool   $status 返回状态
      * @param string $status ajax返回类型 JSON XML
      */
-    protected function ajaxReturn($data, $info = '', $status = 1, $type = 'JSON')
+    public function ajaxReturn($data, $info = '', $status = 1, $type = 'JSON')
     {
         // 保证AJAX返回后也能保存知识
         if (C('LOG_RECORD')) {
@@ -51,6 +53,11 @@ class CommonAction extends BaseAction {
         } else {
             // TODO 增加其它格式
         }
+    }
+    //初始化redis链接
+    private function initCache(){
+        $this->redis=Cac();
+
     }
 	//增加模板结束
 

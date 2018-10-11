@@ -28,6 +28,8 @@ class LoginAction extends CommonAction{
         $userModel->where('user_id='.$res['user_id'])->save($data);
         $data['user_id']=$res['user_id'];
         //todo 数据token 存入redis
+        $uid=$res['user_id'];
+        $this->redis->set('login_'.$uid,$data['token']);
 
 
         $this->ajaxReturn($data,'登陆成功！');

@@ -25,8 +25,6 @@ class RoomModel extends CommonModel
     {
 
     }
-
-
     /**更改房间信息 房间号
      * @param $id
      */
