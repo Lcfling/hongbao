@@ -5,5 +5,8 @@ class HongbaoModel extends CommonModel
     protected $tableName = 'hongbao';
 
 
+    public function getInfoById($id){
+
+    }
 
 }
