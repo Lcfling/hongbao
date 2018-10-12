@@ -13,5 +13,4 @@ class RoomlistAction extends CommonAction
             $this->ajaxReturn('','未知错误！',0);
         }
     }
-
 }
