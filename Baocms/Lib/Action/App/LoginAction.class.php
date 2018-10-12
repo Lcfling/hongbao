@@ -36,6 +36,10 @@ class LoginAction extends CommonAction{
 
     }
 
+    public function test(){
+        D('Hongbao')->creathongbao(500,1,7,172,2);
+    }
+
 
 
 
