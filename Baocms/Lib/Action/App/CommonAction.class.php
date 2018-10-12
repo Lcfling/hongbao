@@ -5,6 +5,7 @@ class CommonAction extends BaseAction {
    
 
     protected $token = '';
+    protected $uid='';
     protected $member = array();
     public $redis=null;
 
@@ -14,7 +15,9 @@ class CommonAction extends BaseAction {
         $this->initCache();
         header("Access-Control-Allow-Origin: *"); // 允许任意域名发起的跨域请求
         header('Access-Control-Allow-Methods:GET, POST');
-        header('Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept');
+        header('Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept ,userid,token');
+        //die('222222');
+        $this->checkLogin();
     }
     //lcf $error success faild
     /**
@@ -52,6 +55,27 @@ class CommonAction extends BaseAction {
             exit($data);
         } else {
             // TODO 增加其它格式
+        }
+    }
+    //验证用户信息
+    public function checkLogin(){
+        if(MODULE_NAME==='Login'){
+            return;
+        }else{
+            $user_id=$_SERVER['HTTP_USERID'];
+            $token=$_SERVER['HTTP_TOKEN'];
+            $userModel=D('Users');
+            $userInfo=$userModel->getUserByUid($user_id);
+            if($userInfo['token']==''){
+                $this->ajaxReturn('','登陆错误失败',2);
+            }
+            if($userInfo['token']===$token){
+                $this->uid=$user_id;
+                $this->member=$userInfo;
+                return;
+            }else{
+                $this->ajaxReturn('','登陆错误失败',2);
+            }
         }
     }
     //初始化redis链接
