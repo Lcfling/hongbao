@@ -79,6 +79,31 @@ class HongbaoModel extends CommonModel
         return true;
     }
 
+    /**获取中雷红包个数 大于3全部设置为3
+     * @param $hongbao_id
+     * @return $count 中雷个数
+     */
+    public function getBomNums($hongbao_id){
+
+        return $count;
+    }
+
+    /**设置红包状态为领取完毕
+     * @param $hongbao_id
+     */
+
+    public function sethongbaoOver($hongbao_id){
+
+    }
+
+    /**获取小红包的信息
+     * @param $kickback_id
+     * @return mixed
+     */
+    public function getkickInfo($kickback_id){
+        return $kickInfo;
+    }
+
     public function creathongbao($money,$bom_num,$num,$roomid,$uid){
         $token=md5(genRandomString(6).time().$uid);
         $data=array();
