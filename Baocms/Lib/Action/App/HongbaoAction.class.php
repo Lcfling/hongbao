@@ -51,14 +51,41 @@ class HongbaoAction extends CommonAction
         $hongbao_id=(int)$_POST['hongbao_id'];//红包id
         $hongbaoModel=D('hongbao');
         $hongbao_info=$hongbaoModel->getInfoById($hongbao_id);
+        $bom_num=$hongbao_info['bom_num'];
 
         //此处加强判断 已经领取  不允许重复领取
         if($hongbaoModel->is_recived($hongbao_id,$this->uid)){
             $this->ajaxReturn('','已经领取过次红包!',0);
         }
-        $kickback_id=$hongbaoModel->getkickid($hongbao_id);
+        $kickback_id=$hongbaoModel->getOnekickid($hongbao_id);
         if($kickback_id>0){
+            //先把自己入队到已经领取
+            $hongbaoModel->UserQueue($hongbao_id,$this->uid);
+            //设置kickback为已经领取
+            $hongbaoModel->setkickbackOver($kickback_id,$this->uid);
+            $kickback_info=$hongbaoModel->getkickInfo($kickback_id);
+            $money=$kickback_info['money'];
+            D('Users')->addmoney($this->uid,$money);
 
+
+
+
+
+
+
+
+            //开始判断最后一位
+            $user_bom=getlastnum($money);
+            //如果相等 中磊
+            if($user_bom==$bom_num){
+                D('Users')->reducemoney((int)($hongbao_info['money']*1.66),$this->uid);
+            }else{
+
+            }
+            //判断是否是最后一个 是的话开始同步数据库信息
+            if($hongbaoModel->is_self_last($hongbao_id,$this->uid)){
+
+            }
         }else{
             $this->ajaxReturn('','手慢了，领取完了!',0);
         }
