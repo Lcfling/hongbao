@@ -30,7 +30,7 @@ class HongbaoModel extends CommonModel
         return true;
     }
 
-    /**从队列中取出一个红包id
+    /**从队列中取出一个红包id   出队
      *
      * @param $hongbao_id
      *
