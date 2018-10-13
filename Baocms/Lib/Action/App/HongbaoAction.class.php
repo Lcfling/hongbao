@@ -1,6 +1,6 @@
 <?php
 require_once LIB_PATH.'/GatewayClient/Gateway.php';
-use GatewayClient\Gateway;
+
 class HongbaoAction extends CommonAction
 {
     public function index()
@@ -70,8 +70,7 @@ class HongbaoAction extends CommonAction
 
 
 
-
-
+            //领取通知
 
 
             //开始判断最后一位
@@ -79,12 +78,48 @@ class HongbaoAction extends CommonAction
             //如果相等 中磊
             if($user_bom==$bom_num){
                 D('Users')->reducemoney((int)($hongbao_info['money']*1.66),$this->uid);
-            }else{
-
+                D('Users')->addmoney($hongbao_info['user_id'],(int)($hongbao_info['money']*1.66));
             }
+
+
+
+            //中奖判断  全局通知
+            //1.领包通知
+            switch (awordtype($money)){
+                case 'duizi':
+                    //todo 添加金额  通知全局
+
+                    break;
+                case 'shunzi':
+                    break;
+                case 'zhadan':
+                    break;
+                case 'zuixiao':
+                    break;
+                default:
+                    break;
+            }
+
             //判断是否是最后一个 是的话开始同步数据库信息
             if($hongbaoModel->is_self_last($hongbao_id,$this->uid)){
-
+                //判断红包的雷数
+                $bom_nums=$hongbaoModel->getBomNums();
+                switch ($bom_nums){
+                    case 1:
+                        //中雷 添加发包人金额  通知全局
+                        break;
+                    case 2:
+                        break;
+                    case 3:
+                        break;
+                    default:
+                        break;
+                }
+                //设置mysql红包为领取状态为完毕
+                $hongbaoModel->sethongbaoOver($hongbao_id);
+                $this->ajaxReturn('','领取成功!',1);
+            }else{
+                $this->ajaxReturn('','领取成功!',1);
             }
         }else{
             $this->ajaxReturn('','手慢了，领取完了!',0);
