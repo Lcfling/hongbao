@@ -35,10 +35,48 @@ class HongbaoModel extends CommonModel
      * @param $hongbao_id
      *
      * @return $kickbackid 0 或  大于0
+     *
+     * 缓存队列键 kickback_queue_187
      */
-    public function getkickid($hongbao_id){
+    public function getOnekickid($hongbao_id){
 
         return $kickbackid;
+    }
+
+
+
+
+    /**领取完毕后 入队已经领取
+     * @param $hongbao_id
+     * @param $uid
+     *
+     * 缓存键 kickback_userin_198   198用户id
+     */
+    public function UserQueue($hongbao_id,$uid){
+
+    }
+
+    /**设置小红包为已经领取
+     * @param $kickbackid
+     * @param $uid  领取人id
+     *
+     * 先改数据库 再更新缓存
+     */
+    public function setkickbackOver($kickbackid,$uid){
+
+    }
+
+    /**从已经领取队列中 判断自己是否是最后一位
+     *
+     * @param $hongbao_id
+     *
+     * @param $uid
+     *
+     * @return bool
+     */
+    public function is_self_last($hongbao_id,$uid){
+
+        return true;
     }
 
     public function creathongbao($money,$bom_num,$num,$roomid,$uid){
@@ -94,15 +132,18 @@ class HongbaoModel extends CommonModel
             }
         }
         $len=Cac()->lLen('kickback_queue_'.$hongbao_info['id']);
+        if($len==6){
+            return true;
 
+        }else{
+            return false;
+        }
         //$arr=Cac()->lrange('kickback_queue_'.$hongbao_info['id'],0,$len);
         //$len=Cac()->lLen('kickback_queue_'.$hongbao_info['id']);
 
         //
     }
-    private function insertkicklist($hongbao_id){
 
-    }
     private function getkicklist($money,$num){
         $totle=$money;
         if($num>1){
@@ -130,4 +171,6 @@ class HongbaoModel extends CommonModel
         }
         return $money_arr;
     }
+
+
 }
