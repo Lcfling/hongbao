@@ -14,8 +14,12 @@ class HongbaoModel extends CommonModel
      * @return bool 领取完毕 true 有待领取 false
      */
     public function isfinish($id){
-
-        return true;
+        $value=Cac()->lget('hongbao_queue_'.$id,0);
+        if($value>0){
+            return false;
+        }else{
+            return true;
+        }
     }
 
     /**是否领取过此红包
@@ -27,7 +31,23 @@ class HongbaoModel extends CommonModel
      * @return bool       领取过 true  未领取 false
      */
     public function is_recived($hongbao_id,$uid){
-        return true;
+        Cac()->rPush('recive_queue_'.$hongbao_id.'_'.$uid,1);
+        if(Cac()->lLen('recive_queue_'.$hongbao_id.'_'.$uid)==1){
+            $list=Cac()->lRange('kickback_user_'.$hongbao_id, 0, -1);
+
+            if(!empty($list)){
+                foreach ($list as $v){
+                    if($v==$uid){
+                        return true;
+                    }
+                }
+                return false;
+            }else{
+                return false;
+            }
+        }else{
+            return true;
+        }
     }
 
     /**从队列中取出一个红包id   出队
@@ -39,7 +59,7 @@ class HongbaoModel extends CommonModel
      * 缓存队列键 kickback_queue_187
      */
     public function getOnekickid($hongbao_id){
-
+        $kickbackid=Cac()->lPop('kickback_queue_'.$hongbao_id);
         return $kickbackid;
     }
 
@@ -53,7 +73,7 @@ class HongbaoModel extends CommonModel
      * 缓存键 kickback_userin_198   198用户id
      */
     public function UserQueue($hongbao_id,$uid){
-
+        Cac()->rPush('kickback_user_'.$hongbao_id,$uid);
     }
 
     /**设置小红包为已经领取
@@ -75,8 +95,12 @@ class HongbaoModel extends CommonModel
      * @return bool
      */
     public function is_self_last($hongbao_id,$uid){
-
-        return true;
+        $value=Cac()->lGet('hongbao_queue_'.$hongbao_id,5);
+        if($value==$uid){
+            return true;
+        }else{
+            return false;
+        }
     }
 
     /**获取中雷红包个数 大于3全部设置为3
@@ -101,7 +125,18 @@ class HongbaoModel extends CommonModel
      * @return mixed
      */
     public function getkickInfo($kickback_id){
-        return $kickInfo;
+        $kickInfo=unserialize(Cac()->get('kickback_id_'.$kickback_id));
+        if(empty($kickInfo)){
+            $kickInfo=D('kickback')->where(array('id'=>$kickback_id))->find();
+            if(!empty($kickInfo)){
+                Cac()->set('kickback_id_'.$kickback_id,serialize($kickInfo));
+            }else{
+                return false;
+            }
+        }else{
+            return $kickInfo;
+        }
+
     }
 
     public function creathongbao($money,$bom_num,$num,$roomid,$uid){
@@ -153,7 +188,7 @@ class HongbaoModel extends CommonModel
         foreach ($new_kicklist as $k=>$v){
             if($v['is_receive']==0){
                 Cac()->rPush('kickback_queue_'.$hongbao_info['id'],$v['id']);
-                Cac()->set('kickback_id_'.$v['id'],$v);
+                Cac()->set('kickback_id_'.$v['id'],serialize($v));
             }
         }
         $len=Cac()->lLen('kickback_queue_'.$hongbao_info['id']);
