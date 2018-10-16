@@ -12,12 +12,11 @@ class CommonAction extends BaseAction {
     //初始化 验证登陆信息 开启跨域
     protected function _initialize()
     {
-        $this->initCache();
+        //$this->initCache();
         header("Access-Control-Allow-Origin: *"); // 允许任意域名发起的跨域请求
         header('Access-Control-Allow-Methods:GET, POST');
         header('Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept ,userid,token');
-        //die('222222');
-        $this->checkLogin();
+        //$this->checkLogin();
     }
     //lcf $error success faild
     /**
@@ -36,7 +35,7 @@ class CommonAction extends BaseAction {
         }
         $result = array();
         $result['status'] = $status;
-        $result['msg'] = $info;
+        $result['info'] = $info;
         $result['data'] = $data;
         if (empty($type)) {
             $type = C('DEFAULT_AJAX_RETURN');

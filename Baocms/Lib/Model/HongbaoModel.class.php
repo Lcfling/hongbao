@@ -5,8 +5,23 @@ class HongbaoModel extends CommonModel
     protected $tableName = 'hongbao';
 
 
+    /**获取红包信息
+     * @param $id
+     * @return bool|mixed 失败 则信息不存在  否则返回红包信息
+     */
     public function getInfoById($id){
-
+        $datainfo=unserialize(Cac()->get('hongbao_info_'.$id));
+        if(empty($datainfo)){
+            $datainfo=$this->where(array('id'=>$id))->find();
+            if(!empty($datainfo)){
+                Cac()->set('hongbao_info_'.$id,serialize($datainfo));
+                return $datainfo;
+            }else{
+                return false;
+            }
+        }else{
+            return $datainfo;
+        }
     }
 
     /**红包是否领取完毕
@@ -22,7 +37,7 @@ class HongbaoModel extends CommonModel
         }
     }
 
-    /**是否领取过此红包
+    /**是否领取过此红包  此过程为原子执行
      *
      * @param $hongbao_id 红包id
      *
@@ -31,10 +46,10 @@ class HongbaoModel extends CommonModel
      * @return bool       领取过 true  未领取 false
      */
     public function is_recived($hongbao_id,$uid){
-        Cac()->rPush('recive_queue_'.$hongbao_id.'_'.$uid,1);
-        if(Cac()->lLen('recive_queue_'.$hongbao_id.'_'.$uid)==1){
+        $rands=genRandomString(6);
+        Cac()->rPush('recive_queue_'.$hongbao_id.'_'.$uid,$rands);
+        if(Cac()->lget('recive_queue_'.$hongbao_id.'_'.$uid,0)==$rands){
             $list=Cac()->lRange('kickback_user_'.$hongbao_id, 0, -1);
-
             if(!empty($list)){
                 foreach ($list as $v){
                     if($v==$uid){
@@ -83,8 +98,33 @@ class HongbaoModel extends CommonModel
      * 先改数据库 再更新缓存
      */
     public function setkickbackOver($kickbackid,$uid){
-
+        if(D('Kickback')->where(array('id'=>$kickbackid))->save(array('user_id'=>$uid))){
+            if($this->setkickbackCacheOver($kickbackid,$uid)){
+                return true;
+            }else{
+                return false;
+            }
+        }else{
+            return false;
+        }
     }
+
+    /**设置小红包的缓存为已经领取
+     * @param $kickback_id
+     * @param $uid
+     * @return bool
+     */
+    public function setkickbackCacheOver($kickback_id,$uid){
+        $ts=unserialize(Cac()->get('kickback_id_'.$kickback_id));
+        if(!empty($ts)){
+            $ts['user_id']=$uid;
+            Cac()->set('kickback_id_'.$kickback_id,serialize($ts));
+            return true;
+        }else{
+            return false;
+        }
+    }
+
 
     /**从已经领取队列中 判断自己是否是最后一位
      *
@@ -112,6 +152,8 @@ class HongbaoModel extends CommonModel
         return $count;
     }
 
+
+
     /**设置红包状态为领取完毕
      * @param $hongbao_id
      */
@@ -119,6 +161,7 @@ class HongbaoModel extends CommonModel
     public function sethongbaoOver($hongbao_id){
 
     }
+
 
     /**获取小红包的信息
      * @param $kickback_id
@@ -188,6 +231,7 @@ class HongbaoModel extends CommonModel
         foreach ($new_kicklist as $k=>$v){
             if($v['is_receive']==0){
                 Cac()->rPush('kickback_queue_'.$hongbao_info['id'],$v['id']);
+                Cac()->rPush('kickback_queue_back_'.$hongbao_info['id'],$v['id']);//复制一条队列  用于遍历数据
                 Cac()->set('kickback_id_'.$v['id'],serialize($v));
             }
         }
