@@ -29,7 +29,7 @@ class HongbaoModel extends CommonModel
      * @return bool 领取完毕 true 有待领取 false
      */
     public function isfinish($id){
-        $value=Cac()->lget('hongbao_queue_'.$id,0);
+        $value=Cac()->lGet('kickback_queue_'.$id,0);
         if($value>0){
             return false;
         }else{
@@ -45,7 +45,7 @@ class HongbaoModel extends CommonModel
      *
      * @return bool       领取过 true  未领取 false
      */
-    public function is_recived($hongbao_id,$uid){
+    public function is_recivedQ($hongbao_id,$uid){
         $rands=genRandomString(6);
         Cac()->rPush('recive_queue_'.$hongbao_id.'_'.$uid,$rands);
         if(Cac()->lget('recive_queue_'.$hongbao_id.'_'.$uid,0)==$rands){
@@ -62,6 +62,19 @@ class HongbaoModel extends CommonModel
             }
         }else{
             return true;
+        }
+    }
+    public function is_recived($hongbao_id,$uid){
+        $list=Cac()->lRange('kickback_user_'.$hongbao_id, 0, -1);
+        if(!empty($list)){
+            foreach ($list as $v){
+                if($v==$uid){
+                    return true;
+                }
+            }
+            return false;
+        }else{
+            return false;
         }
     }
 
@@ -98,7 +111,7 @@ class HongbaoModel extends CommonModel
      * 先改数据库 再更新缓存
      */
     public function setkickbackOver($kickbackid,$uid){
-        if(D('Kickback')->where(array('id'=>$kickbackid))->save(array('user_id'=>$uid))){
+        if(D('Kickback')->where(array('id'=>$kickbackid))->save(array('user_id'=>$uid,'is_receive'=>1))){
             if($this->setkickbackCacheOver($kickbackid,$uid)){
                 return true;
             }else{
@@ -135,13 +148,14 @@ class HongbaoModel extends CommonModel
      * @return bool
      */
     public function is_self_last($hongbao_id,$uid){
-        $value=Cac()->lGet('hongbao_queue_'.$hongbao_id,5);
+        $value=Cac()->lGet('kickback_user_'.$hongbao_id,5);
         if($value==$uid){
             return true;
         }else{
             return false;
         }
     }
+
 
     /**获取中雷红包个数 大于3全部设置为3
      * @param $hongbao_id
@@ -182,7 +196,7 @@ class HongbaoModel extends CommonModel
 
     }
 
-    public function creathongbao($money,$bom_num,$num,$roomid,$uid){
+    public function createhongbao($money,$bom_num,$num,$roomid,$uid){
         $token=md5(genRandomString(6).time().$uid);
         $data=array();
         $data['token']=$token;
@@ -233,12 +247,14 @@ class HongbaoModel extends CommonModel
                 Cac()->rPush('kickback_queue_'.$hongbao_info['id'],$v['id']);
                 Cac()->rPush('kickback_queue_back_'.$hongbao_info['id'],$v['id']);//复制一条队列  用于遍历数据
                 Cac()->set('kickback_id_'.$v['id'],serialize($v));
+            }else{
+                Cac()->lPush('kickback_queue_back_'.$hongbao_info['id'],$v['id']);//复制一条队列  用于遍历数据
+                Cac()->set('kickback_id_'.$v['id'],serialize($v));
             }
         }
         $len=Cac()->lLen('kickback_queue_'.$hongbao_info['id']);
         if($len==6){
-            return true;
-
+            return $hongbao_info;
         }else{
             return false;
         }
