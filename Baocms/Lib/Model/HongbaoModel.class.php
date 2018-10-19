@@ -111,7 +111,7 @@ class HongbaoModel extends CommonModel
      * 先改数据库 再更新缓存
      */
     public function setkickbackOver($kickbackid,$uid){
-        if(D('Kickback')->where(array('id'=>$kickbackid))->save(array('user_id'=>$uid,'is_receive'=>1))){
+        if(D('Kickback')->where(array('id'=>$kickbackid))->save(array('user_id'=>$uid,'is_receive'=>1,'recivetime'=>time()))){
             if($this->setkickbackCacheOver($kickbackid,$uid)){
                 return true;
             }else{
@@ -131,6 +131,7 @@ class HongbaoModel extends CommonModel
         $ts=unserialize(Cac()->get('kickback_id_'.$kickback_id));
         if(!empty($ts)){
             $ts['user_id']=$uid;
+            $ts['recivetime']=time();
             Cac()->set('kickback_id_'.$kickback_id,serialize($ts));
             return true;
         }else{
@@ -163,6 +164,20 @@ class HongbaoModel extends CommonModel
      */
     public function getBomNums($hongbao_id){
 
+        $hongbao_info=$this->getInfoById($hongbao_id);
+        $numsArr=Cac()->lRange('kickback_queue_back_'.$hongbao_id,0,-1);
+        foreach ($numsArr as $v){
+            $tempArr=array();
+            $tempArr=$this->getkickInfo($v);
+            //print_r($tempArr);
+            if(substr($tempArr['money'],-1)==$hongbao_info['bom_num']){
+                //$list[]=$tempArr;
+
+                $nums++;
+
+                $list[]=$tempArr;
+            }
+        }
         return $count;
     }
 
@@ -190,10 +205,43 @@ class HongbaoModel extends CommonModel
             }else{
                 return false;
             }
-        }else{
-            return $kickInfo;
         }
+        return $kickInfo;
 
+    }
+    public function getkickListInfo($hongbao_id,$uid=0){
+        $list=array();
+        $nums=0;
+        $money=0;
+        $check=1;
+        $numsArr=Cac()->lRange('kickback_queue_back_'.$hongbao_id,0,-1);
+        foreach ($numsArr as $v){
+            $tempArr=array();
+            $tempArr=$this->getkickInfo($v);
+            //print_r($tempArr);
+            if($tempArr['user_id']>0||$tempArr['is_receive']==1){
+                //$list[]=$tempArr;
+
+                $nums++;
+                if($uid>0&&$tempArr['user_id']==$uid){
+                    $money=$tempArr['money'];
+                    if($tempArr['is_receive']==0){
+                        //print_r($tempArr);
+                        $tempArr['is_receive']='1';
+                        Cac()->set('kickback_id_'.$tempArr['id'],serialize($tempArr));
+                        //print_r(unserialize(Cac()->get('kickback_id_'.$tempArr['id'])));
+                        $check=0;
+                    }
+
+                }
+                $list[]=$tempArr;
+            }
+        }
+        $res['num']=$nums;
+        $res['money']=$money;
+        $res['check']=$check;
+        $res['list']=$list;
+        return $res;
     }
 
     public function createhongbao($money,$bom_num,$num,$roomid,$uid){

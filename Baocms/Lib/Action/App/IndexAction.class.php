@@ -11,11 +11,13 @@ class IndexAction extends CommonAction
         $data=array(
             0=>array(
                 'title'=>'扫雷',
-                'game'=>'saolei'
+                'game'=>'saolei',
+                'img'=>'img/game1.png'
             ),
             1=>array(
                 'title'=>'接龙',
-                'game'=>'jielong'
+                'game'=>'jielong',
+                'img'=>'img/game2.png'
             )
         );
         $this->ajaxReturn($data,'success',1);
@@ -26,7 +28,7 @@ class IndexAction extends CommonAction
         Gateway::$registerAddress = '127.0.0.1:1238';
 
 	    $data=array(
-	        'roomid'=>1007,
+	        'roomid'=>3735273,
             'm'=>1,
             'data'=>array(
                 'username'=>'美女',
@@ -47,7 +49,7 @@ class IndexAction extends CommonAction
         Gateway::$registerAddress = '127.0.0.1:1238';
 
         $data=array(
-            'roomid'=>1007,
+            'roomid'=>3735273,
             'm'=>1,
             'data'=>array(
                 'username'=>'别人的',
@@ -68,7 +70,7 @@ class IndexAction extends CommonAction
         Gateway::$registerAddress = '127.0.0.1:1238';
 
         $data=array(
-            'roomid'=>1007,
+            'roomid'=>3735273,
             'm'=>2,
             'data'=>array(
                 'username'=>'美女',
@@ -91,7 +93,7 @@ class IndexAction extends CommonAction
         Gateway::$registerAddress = '127.0.0.1:1238';
 
         $data=array(
-            'roomid'=>1007,
+            'roomid'=>3735273,
             'm'=>3,
             'data'=>array(
                 'username'=>'美女',
@@ -104,24 +106,14 @@ class IndexAction extends CommonAction
         $data=json_encode($data);
         Gateway::sendToAll($data);
         echo '发送完毕';
-
-
     }
     public function redis(){
-        $redis = new redis();
-        $redis->connect('127.0.0.1', 6379);
-        $redis->delete('test');
-        $redis->delete('test_2');
-        $redis->lpush("test","111");
-        $redis->lpush("test","222");
-        $redis->rpush("test","333");
-        $redis->rpush("test","444");
-        $s=$redis->lRange('test',0,-1);
+
+        $s=Cac()->lRange('kickback_queue_1',0,-1);
         print_r($s);
-        foreach ($s as $v){
-            $redis->rpush("test_2",$v);
-        }
-        //$redis->set('test_2',$s);
-        var_dump($redis->lget("test_2",2));
+    }
+    public function test22(){
+	    $this->uid=1675552;
+        echo D('Users')->getUserMoney($this->uid);
     }
 }

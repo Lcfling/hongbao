@@ -55,12 +55,18 @@ class LoginAction extends CommonAction{
         }else{
             //不存在 入库用户信息
             $userInfo=$userModel->insertUserInfo($mobile,$pid);
+            if(empty($userInfo)){
+                $this->ajaxReturn($userInfo,'登录失败！',0);
+            }
         }
         $this->ajaxReturn($userInfo,'登录成功！',1);
     }
 
     public function test(){
-        D('Hongbao')->creathongbao(500,1,7,172,2);
+        $num=123382;
+        $len=strlen($num);
+        $num=substr($num,-1);
+        echo $num;
     }
 
     public function sendcode(){
@@ -83,7 +89,6 @@ class LoginAction extends CommonAction{
 
         echo $code;
     }
-
 
 
     //产生一个指定长度的随机字符串,并返回给用户

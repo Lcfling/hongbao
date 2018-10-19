@@ -20,28 +20,29 @@ class HongbaoAction extends CommonAction
         $hongbao_id=(int)$_POST['hongbao_id'];
         $hongbaoModel=D('Hongbao');
         $hongbao_info=$hongbaoModel->getInfoById($hongbao_id);
+        $userInfo=D('Users')->getUserByUid($hongbao_info['user_id']);
+        $hongbao_info['username']=$userInfo['nickname'];
         if($hongbao_info['creatime']<time()-180){
-            $info['type']=2;
-            $info['remark']='红包过期';
-            $this->ajaxReturn($info,'红包过期!',1);
+            $hongbao_info['type']=2;
+            $hongbao_info['remark']='红包过期';
+            $this->ajaxReturn($hongbao_info,'红包过期!',1);
         }
         if($hongbaoModel->isfinish($hongbao_id)){
-            $info['type']=3;
-            $info['remark']='红包已经领取完毕!';
-            $this->ajaxReturn($info,'红包已经领取完毕!',1);
+            $hongbao_info['type']=3;
+            $hongbao_info['remark']='红包已经领取完毕!';
+            $this->ajaxReturn($hongbao_info,'红包已经领取完毕!',1);
         }
         //此处加强判断 已经领取  不允许重复领取
         if($hongbaoModel->is_recived($hongbao_id,$this->uid)){
-            $info['type']=4;
-            $info['remark']='已经领取过次红包!';
-            $this->ajaxReturn('','已经领取过次红包!',1);
+            $hongbao_info['type']=4;
+            $hongbao_info['remark']='已经领取过次红包!';
+            $this->ajaxReturn($hongbao_info,'已经领取过次红包!',1);
         }
         //余额判断   余额小于红包总金额的1.66倍 不允许强
 
         $hongbao_info['type']=1;
         $hongbao_info['remark']='可以领取';
-        $userInfo=D('Users')->getUserByUid($hongbao_info['user_id']);
-        $hongbao_info['username']=$userInfo['nickname'];
+
         $this->ajaxReturn($hongbao_info,'可以领取',1);
 
     }
@@ -50,6 +51,9 @@ class HongbaoAction extends CommonAction
         $hongbao_id=(int)$_POST['hongbao_id'];//红包id
         $hongbaoModel=D('Hongbao');
         $hongbao_info=$hongbaoModel->getInfoById($hongbao_id);
+        if(empty($hongbao_info)){
+            $this->ajaxReturn('','红包不存在！',0);
+        }
         $bom_num=$hongbao_info['bom_num'];
         $userMoney=D('Users')->getUserMoney($this->uid);
         if($userMoney<$hongbao_info['money']*1.66){
@@ -75,29 +79,50 @@ class HongbaoAction extends CommonAction
 
 
             //领取通知
-
+            $userinfo=D('Users')->getUserByUid($this->uid);
+            $this->benotify($hongbao_info,$userinfo);
 
             $user_bom=substr((int)$money,-1);
             //如果相等 中磊
             if($user_bom==$bom_num){
-                D('Users')->reducemoney((int)($hongbao_info['money']*1.66),$this->uid,5);//中雷
+                D('Users')->reducemoney($this->uid,(int)($hongbao_info['money']*1.66),5);//中雷
                 D('Users')->addmoney($hongbao_info['user_id'],(int)($hongbao_info['money']*1.66),3);//收雷
             }
+
+
+            //领取中奖
 
             //判断是否是最后一个 是的话开始同步数据库信息
             if($hongbaoModel->is_self_last($hongbao_id,$this->uid)){
                 //判断红包的雷数
                 $bom_nums=$hongbaoModel->getBomNums();
+                $awordmoney=0;
                 switch ($bom_nums){
-                    case 1:
-                        //中雷 添加发包人金额  通知全局
-                        break;
-                    case 2:
-                        break;
+
                     case 3:
+                        $awordmoney=1888;
+
+                        break;
+                    case 4:
+                        $awordmoney=4888;
+                        break;
+                    case 5:
+                        $awordmoney=18800;
+                        break;
+                    case 6:
+                        $awordmoney=38800;
+                        break;
+                    case 7:
+                        $awordmoney=58800;
                         break;
                     default:
                         break;
+                }
+                if($bom_nums>2){
+                    $type='['.$bom_nums.' 雷]';
+                    $hbUser=D('user')->getUserByUid($hongbao_info['user_id']);
+                    D('Users')->addmoney($hongbao_info['user_id'],$awordmoney,7);//奖励
+                    $this->awordnotify($hongbao_info,$hbUser,$type,$awordmoney);
                 }
                 //设置mysql红包为领取状态为完毕
                 $hongbaoModel->sethongbaoOver($hongbao_id);
@@ -122,8 +147,11 @@ class HongbaoAction extends CommonAction
         $hongbao_id=(int)$_POST['hongbao_id'];
         $HbModel=D('Hongbao');
         $hongbao_info=$HbModel->getInfoById($hongbao_id);
-        $this->member;
 
+        if(empty($hongbao_info)){
+            $this->ajaxReturn('','红包不存在！',0);
+        }
+        $hbUser=D('Users')->getUserByUid($hongbao_info['user_id']);
         //判断超时
         if($hongbao_info['creatime']<time()-180){
             $timeout=1;
@@ -136,15 +164,53 @@ class HongbaoAction extends CommonAction
         }else{
             $finish=0;
         }
-        if($HbModel->is_recived()){
+        $kickList=$HbModel->getkickListInfo($hongbao_id,$this->uid);
+
+        if($HbModel->is_recived($hongbao_id,$this->uid)){
             $recived=1;
+            $res['is_selfin']=1;
+            $res['selfmoney']=$kickList['money'];
+            if($hongbao_info['bom_num']==substr($kickList['money'],-1)){
+                $res['is_bom']=1;
+            }else{
+                $res['is_bom']=0;
+            }
         }else{
             $recived=0;
+            $res['is_selfin']=0;
+            $res['selfmoney']=0;
         }
+
+        $res['hongbao_id']=$hongbao_id;
+        $res['username']=$hbUser['nickname'];
+        $res['money']=$hongbao_info['money'];
+        $res['bom_num']=$hongbao_info['bom_num'];
+        $res['recive_num']=$kickList['num'];
+        $res['check']=$kickList['check'];
+        $res['nums']=7;
+        $res['list']=$kickList['list'];
+        foreach ($res['list'] as &$v){
+            $v['recivetime']=date('h:i:s',$v['recivetime']);
+            if($v['user_id']>0){
+                $userTemp=D('Users')->getUserByUid($v['user_id']);
+                $v['username']=$userTemp['nickname'];
+                $v['face']=$userTemp['face'];
+            }else{
+                $v['username']='免死';
+                $v['face']='img/miansi.jpg';
+            }
+
+        }
+
+
+        if($timeout==0&&$finish==0&&$recived==0){
+            $this->ajaxReturn('','红包未领取！',0);
+        }
+        $this->ajaxReturn($res,'请求成功！',1);
+
+
+
     }
-
-
-
 
     /**发红包
      *
@@ -190,7 +256,7 @@ class HongbaoAction extends CommonAction
         if($hongbao_info){
             D('Users')->reducemoney($this->uid,$money,4,'发送红包');
             //通知
-            $this->sendnotify($hongbao_info,$this->member);
+            $this->sendnotify($hongbao_info,$this->member,$hongbao_info['roomid']);
             $this->ajaxReturn('','发送完毕!',1);
         }else{
             $this->ajaxReturn('','红包发送失败！',0);
@@ -199,30 +265,51 @@ class HongbaoAction extends CommonAction
 
 
 
-    private function awordnotify($money){
+    private function awordnotify($hb,$userinfo,$aword,$type){
         //中奖判断  全局通知
         //1.领包通知
-        switch (awordtype($money)){
-            case 'duizi':
-                //todo 添加金额  通知全局
-
-                break;
-            case 'shunzi':
-                break;
-            case 'zhadan':
-                break;
-            case 'zuixiao':
-                break;
-            default:
-                break;
-        }
+        Gateway::$registerAddress = '127.0.0.1:1238';
+        $data=array(
+            'roomid'=>$hb['money'],
+            'm'=>2,
+            'data'=>array(
+                'username'=>$userinfo['nickname'],
+                'user_id'=>$userinfo['user_id'],
+                'aword'=>$aword,
+                'money'=>$hb['money'],
+                'hongbao_id'=>$hb['id'],
+                'bom_num'=>$hb['bom_num'],
+                'type'=>$type
+            )
+        );
+        $data=json_encode($data);
+        Gateway::sendToAll($data);
     }
     private function sendnotify($hb,$userinfo)
     {
         Gateway::$registerAddress = '127.0.0.1:1238';
         $data=array(
-            'roomid'=>3735273,
+            'roomid'=>$hb['roomid'],
             'm'=>1,
+            'data'=>array(
+                'username'=>$userinfo['nickname'],
+                'user_id'=>$userinfo['user_id'],
+                'avatar'=>$userinfo['face'],
+                'hongbao_id'=>$hb['id'],
+                'money'=>$hb['money'],
+                'bom_num'=>$hb['bom_num']
+            )
+        );
+        $data=json_encode($data);
+        Gateway::sendToAll($data);
+    }
+    //红包倍领取通知
+
+    private function benotify($hb,$userinfo){
+        Gateway::$registerAddress = '127.0.0.1:1238';
+        $data=array(
+            'roomid'=>$hb['roomid'],
+            'm'=>3,
             'data'=>array(
                 'username'=>$userinfo['nickname'],
                 'user_id'=>$userinfo['user_id'],

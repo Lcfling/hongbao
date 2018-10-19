@@ -16,7 +16,7 @@ class CommonAction extends BaseAction {
         header("Access-Control-Allow-Origin: *"); // 允许任意域名发起的跨域请求
         header('Access-Control-Allow-Methods:GET, POST');
         header('Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept ,userid,token');
-        //$this->checkLogin();
+        $this->checkLogin();
     }
     //lcf $error success faild
     /**
