@@ -76,8 +76,6 @@ class HongbaoAction extends CommonAction
             D('Users')->addmoney($this->uid,$money,2);
 
 
-
-
             //领取通知
             $userinfo=D('Users')->getUserByUid($this->uid);
             $this->benotify($hongbao_info,$userinfo);
@@ -91,17 +89,20 @@ class HongbaoAction extends CommonAction
 
 
             //领取中奖
-
+            $selfaword=number_type($money);
+            if($selfaword>0){
+                $type='['.($money/100).']';
+                $this->awordnotify($hongbao_info,$userinfo,$selfaword,$type);
+                D('Users')->addmoney($this->uid,$selfaword,7);//收雷
+            }
             //判断是否是最后一个 是的话开始同步数据库信息
             if($hongbaoModel->is_self_last($hongbao_id,$this->uid)){
                 //判断红包的雷数
-                $bom_nums=$hongbaoModel->getBomNums();
+                $bom_nums=$hongbaoModel->getBomNums($hongbao_id);
                 $awordmoney=0;
                 switch ($bom_nums){
-
                     case 3:
                         $awordmoney=1888;
-
                         break;
                     case 4:
                         $awordmoney=4888;
@@ -116,14 +117,16 @@ class HongbaoAction extends CommonAction
                         $awordmoney=58800;
                         break;
                     default:
+                        $awordmoney=0;
                         break;
                 }
-                if($bom_nums>2){
+                if($bom_nums > 2){
                     $type='['.$bom_nums.' 雷]';
-                    $hbUser=D('user')->getUserByUid($hongbao_info['user_id']);
+                    $hbUser=D('Users')->getUserByUid($hongbao_info['user_id']);
                     D('Users')->addmoney($hongbao_info['user_id'],$awordmoney,7);//奖励
                     $this->awordnotify($hongbao_info,$hbUser,$type,$awordmoney);
                 }
+
                 //设置mysql红包为领取状态为完毕
                 $hongbaoModel->sethongbaoOver($hongbao_id);
                 $this->ajaxReturn('','领取成功!',1);
@@ -190,7 +193,7 @@ class HongbaoAction extends CommonAction
         $res['nums']=7;
         $res['list']=$kickList['list'];
         foreach ($res['list'] as &$v){
-            $v['recivetime']=date('h:i:s',$v['recivetime']);
+            $v['recivetime']=date('H:i:s',$v['recivetime']);
             if($v['user_id']>0){
                 $userTemp=D('Users')->getUserByUid($v['user_id']);
                 $v['username']=$userTemp['nickname'];
@@ -254,7 +257,7 @@ class HongbaoAction extends CommonAction
         //生成红包
         $hongbao_info=D('Hongbao')->createhongbao($money,$bom_num,7,$roomid,$this->uid);
         if($hongbao_info){
-            D('Users')->reducemoney($this->uid,$money,4,'发送红包');
+            D('Users')->reducemoney($this->uid,$money,4,1,'发送红包');
             //通知
             $this->sendnotify($hongbao_info,$this->member,$hongbao_info['roomid']);
             $this->ajaxReturn('','发送完毕!',1);
@@ -264,13 +267,12 @@ class HongbaoAction extends CommonAction
     }
 
 
-
     private function awordnotify($hb,$userinfo,$aword,$type){
         //中奖判断  全局通知
         //1.领包通知
         Gateway::$registerAddress = '127.0.0.1:1238';
         $data=array(
-            'roomid'=>$hb['money'],
+            'roomid'=>$hb['roomid'],
             'm'=>2,
             'data'=>array(
                 'username'=>$userinfo['nickname'],
@@ -320,6 +322,31 @@ class HongbaoAction extends CommonAction
             )
         );
         $data=json_encode($data);
-        Gateway::sendToAll($data);
+        Gateway::sendToUid($hb['user_id'],$data);
+    }
+
+    public function aotudosend(){
+        //获取随机用户
+
+        //获取房间列表
+        $roomlist=D('Room')->getroomlist('saolei');
+        foreach ($roomlist as $roomid){
+            //查看一分钟内是否有当前房间内发送的红包
+            if(D('Hongbao')->issendIntime($roomid,60)){
+                continue;
+            }
+            //获取随机用户
+            $user=D('Users')->randUser();
+            $roominfo=D('Room')->getroom($roomid);
+            $money=$roominfo['conf_min'];
+            $bom_num=rand_string(1,1);
+            $hongbao_info=D('Hongbao')->createhongbao($money,$bom_num,7,$roomid,$user['id']);
+            if($hongbao_info){
+                D('Users')->reducemoney($user['id'],$money,4,0,'发送红包');
+                //通知
+                $this->sendnotify($hongbao_info,$user,$hongbao_info['roomid']);
+                continue;
+            }
+        }
     }
 }

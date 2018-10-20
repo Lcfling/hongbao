@@ -136,5 +136,10 @@ class UsersModel extends CommonModel
             return false;
         }
     }
+    //获取一个随机机器用户信息
+    public function randUser(){
+
+
+    }
 
 }

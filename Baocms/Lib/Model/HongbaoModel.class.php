@@ -163,19 +163,16 @@ class HongbaoModel extends CommonModel
      * @return $count 中雷个数
      */
     public function getBomNums($hongbao_id){
-
         $hongbao_info=$this->getInfoById($hongbao_id);
         $numsArr=Cac()->lRange('kickback_queue_back_'.$hongbao_id,0,-1);
+        $count=0;
         foreach ($numsArr as $v){
             $tempArr=array();
             $tempArr=$this->getkickInfo($v);
             //print_r($tempArr);
             if(substr($tempArr['money'],-1)==$hongbao_info['bom_num']){
                 //$list[]=$tempArr;
-
-                $nums++;
-
-                $list[]=$tempArr;
+                $count++;
             }
         }
         return $count;
@@ -340,5 +337,14 @@ class HongbaoModel extends CommonModel
         return $money_arr;
     }
 
+    //
+    public function issendIntime($roomid,$time){
+        $res=$this->where('roomid='.$time.' AND creatime<'.time()-$time)->Filed('id')->select();
+        if(empty($res)){
+            return false;
+        }else{
+            return true;
+        }
+    }
 
 }
