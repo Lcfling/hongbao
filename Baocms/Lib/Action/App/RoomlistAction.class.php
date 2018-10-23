@@ -10,7 +10,7 @@ class RoomlistAction extends CommonAction
         if(!empty($roomlist)){
             $this->ajaxReturn($roomlist);
         }else{
-            $this->ajaxReturn('','未知错误！',1);
+            $this->ajaxReturn('','未知错误！',2);
         }
     }
 }
