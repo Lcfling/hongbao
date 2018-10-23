@@ -14,7 +14,7 @@ class HongbaoModel extends CommonModel
      * @return bool 领取完毕 true 有待领取 false
      */
     public function isfinish($id){
-
+//不大于0 等于领取过
         return true;
     }
 
@@ -27,6 +27,8 @@ class HongbaoModel extends CommonModel
      * @return bool       领取过 true  未领取 false
      */
     public function is_recived($hongbao_id,$uid){
+        //单个用户是否领取过红包
+
         return true;
     }
 
