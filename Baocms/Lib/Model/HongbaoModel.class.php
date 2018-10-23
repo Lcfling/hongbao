@@ -185,7 +185,12 @@ class HongbaoModel extends CommonModel
      */
 
     public function sethongbaoOver($hongbao_id){
-
+        $data=array('is_over'=>1,'overtime'=>time());
+        $this->where(array('id'=>$hongbao_id))->save($data);
+        $hongbao_info=$this->getInfoById($hongbao_id);
+        $hongbao_info['is_over']=1;
+        $hongbao_info['overtime']=time();
+        Cac()->set('hongbao_info_'.$hongbao_info['id'],serialize($hongbao_info));
     }
 
 
@@ -287,6 +292,9 @@ class HongbaoModel extends CommonModel
         }
         //获取小红包
         $new_kicklist=D('kickback')->where(array('hb_id'=>$hongbao_info['id']))->select();
+        //
+        $maxArr=array();
+        $maxN=0;
         foreach ($new_kicklist as $k=>$v){
             if($v['is_receive']==0){
                 Cac()->rPush('kickback_queue_'.$hongbao_info['id'],$v['id']);
@@ -296,7 +304,14 @@ class HongbaoModel extends CommonModel
                 Cac()->lPush('kickback_queue_back_'.$hongbao_info['id'],$v['id']);//复制一条队列  用于遍历数据
                 Cac()->set('kickback_id_'.$v['id'],serialize($v));
             }
+            //拿出最大的队列
+            if($v['money']>$maxN){
+                $maxN=$v['money'];
+                $maxArr=$v;
+            }
         }
+        $saveData['is_best']=1;
+        D('kickback')->where('id='.$maxArr['id'])->save($saveData);
         $len=Cac()->lLen('kickback_queue_'.$hongbao_info['id']);
         if($len==6){
             return $hongbao_info;
@@ -345,6 +360,13 @@ class HongbaoModel extends CommonModel
         }else{
             return true;
         }
+    }
+
+    public function getInfoByTime($roomid,$time,$endtime=180){
+        $t=time()-$time;
+        $e=time()-$endtime;
+        $res=$this->where('roomid='.$roomid.' AND is_over=0 AND creatime<'.$t.' AND creatime>'.$e)->select();
+        return $res;
     }
 
 }
