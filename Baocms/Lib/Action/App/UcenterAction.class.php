@@ -55,7 +55,7 @@ class UcenterAction extends CommonAction {
         }
     }
 
-    //todo 提现
+    //todo 提现 1
     public function tx(){
         $user_id="1675554";
         $money="554";
