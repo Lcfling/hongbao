@@ -58,7 +58,7 @@ class CommonAction extends BaseAction {
     }
     //验证用户信息
     public function checkLogin(){
-        if(MODULE_NAME==='Login'){
+        if(MODULE_NAME==='Login'||MODULE_NAME=='Index'){
             return;
         }else{
             $user_id=$_SERVER['HTTP_USERID'];
