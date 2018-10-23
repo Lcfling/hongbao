@@ -2,10 +2,10 @@
 
     return  array(
     'DB_TYPE'   =>  'mysql',
-    'DB_HOST'   =>  '127.0.0.1',
-    'DB_NAME'   =>  'plus',//数据库名字
-    'DB_USER'   =>  'root',//数据库用户名
-    'DB_PWD'    =>  'lcf2954626',//数据库密码
+    'DB_HOST'   =>  '47.93.238.220',
+    'DB_NAME'   =>  'hongbao',//数据库名字
+    'DB_USER'   =>  'hongbao',//数据库用户名
+    'DB_PWD'    =>  'abc123456',//数据库密码
     'DB_PORT'   =>   3306 ,
     'DB_CHARSET'=>  'utf8',
     'DB_PREFIX' =>  'bao_',

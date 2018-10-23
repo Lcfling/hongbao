@@ -35,12 +35,60 @@ class LoginAction extends CommonAction{
         $this->ajaxReturn($data,'登陆成功！');
 
     }
-
-    public function test(){
-        D('Hongbao')->creathongbao(500,1,7,172,2);
+    public function mobile(){
+        $mobile=(int)$_POST['mobile'];
+        $code=(int)$_POST['code'];
+        if(!isMobile($mobile)){
+            $this->ajaxReturn('','手机号码格式错误！',0);
+        }
+        $userModel = D('Users');
+        $userInfo=$userModel->getUserByMobile($mobile,true);
+        //print_r($userInfo);
+        $Cachecode=Cac()->get('login_code_'.$mobile);
+        if($code!=$Cachecode){
+            $this->ajaxReturn('','验证码错误！',0);
+        }
+        //判断用户是否存在
+        $pid=(int)$_GET['pid'];
+        if(!empty($userInfo)){
+            $userInfo=$userModel->updateLoginCache($userInfo);
+        }else{
+            //不存在 入库用户信息
+            $userInfo=$userModel->insertUserInfo($mobile,$pid);
+            if(empty($userInfo)){
+                $this->ajaxReturn($userInfo,'登录失败！',0);
+            }
+        }
+        $this->ajaxReturn($userInfo,'登录成功！',1);
     }
 
+    public function test(){
+        $num=123382;
+        $len=strlen($num);
+        $num=substr($num,-1);
+        echo $num;
+    }
 
+    public function sendcode(){
+        $mobile=(int)$_POST['mobile'];
+        if(!isMobile($mobile)){
+            $this->ajaxReturn('','手机号码格式错误！',0);
+        }
+        $code=rand_string(6,1);
+        Cac()->set('login_code_'.$mobile,$code,300);
+        //todo 发送短信
+        //Sms:LoginCodeSend($mobile,$code);
+        $this->ajaxReturn('','短信发送成功！',1);
+    }
+    public function getcodeview(){
+        $mobile=(int)$_GET['mobile'];
+        if(!isMobile($mobile)){
+            $this->ajaxReturn('','手机号码格式错误！',0);
+        }
+        $code=Cac()->get('login_code_'.$mobile);
+
+        echo $code;
+    }
 
 
     //产生一个指定长度的随机字符串,并返回给用户
