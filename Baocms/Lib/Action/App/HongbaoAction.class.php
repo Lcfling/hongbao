@@ -5,8 +5,7 @@ use GatewayClient\Gateway;
 
 class HongbaoAction extends CommonAction
 {
-    public function index()
-    {
+    public function index(){
         $gametype=$_POST['gametype'];
         $roomlist=D('Room')->getroomlist($gametype);
         if(!empty($roomlist)){
@@ -348,5 +347,159 @@ class HongbaoAction extends CommonAction
                 continue;
             }
         }
+    }
+
+    //机器人自动清包
+    public function aotuopenkick(){
+        $roomlist=D('Room')->getroomlist('saolei');
+        foreach ($roomlist as $roomdata){
+            $roomid=$roomdata['room_id'];
+            //拿出来发包时间在某一个时间段的信息
+            $time=5;
+            //最多抢包次数
+            $qnums='4';
+            $baoList=D('Hongbao')->getInfoByTime($roomid,$time);
+            print_r($baoList);
+            foreach ($baoList as $hongbao_info){
+                if($hongbao_info['creatime']<time()-$time&&$hongbao_info['is_over']!=1){
+                    //获取一个机器人用户
+                    $user=D('Users')->getrandUser();
+
+                    $hongbao_id=$hongbao_info['id'];//红包id
+                    $hongbaoModel=D('Hongbao');
+                    if(empty($hongbao_info)){
+                        break;
+                    }
+                    $bom_num=$hongbao_info['bom_num'];
+                    //$userMoney=D('Users')->getUserMoney($this->uid);
+
+                    //此处加强判断 已经领取  不允许重复领取
+                    if($hongbaoModel->is_recivedQ($hongbao_id,$user['user_id'])){
+                        break;
+                    }
+                    $kickback_id=$hongbaoModel->getOnekickid($hongbao_id);
+                    if($kickback_id>0){
+                        //先把自己入队到已经领取
+                        $hongbaoModel->UserQueue($hongbao_id,$user['user_id']);
+                        //设置kickback为已经领取
+                        $hongbaoModel->setkickbackOver($kickback_id,$user['user_id']);
+                        $kickback_info=$hongbaoModel->getkickInfo($kickback_id);
+                        $money=$kickback_info['money'];
+                        D('Users')->addmoney($user['id'],$money,2,0);
+
+
+                        //领取通知
+                        //$userinfo=D('Users')->getUserByUid($this->uid);
+                        $this->benotify($hongbao_info,$user);
+
+                        $user_bom=substr((int)$money,-1);
+                        //如果相等 中磊
+                        if($user_bom==$bom_num){
+                            D('Users')->reducemoney($user['user_id'],(int)($hongbao_info['money']*1.66),5,0);//中雷
+                            D('Users')->addmoney($hongbao_info['user_id'],(int)($hongbao_info['money']*1.66),3);//收雷
+                        }
+
+
+                        //领取中奖
+                        $selfaword=number_type($money);
+                        if($selfaword>0){
+                            $type='['.($money/100).']';
+                            $this->awordnotify($hongbao_info,$user,$selfaword,$type);
+                            D('Users')->addmoney($user['user_id'],$selfaword,7,0);//收雷
+                        }
+                        //判断是否是最后一个 是的话开始同步数据库信息
+                        if($hongbaoModel->is_self_last($hongbao_id,$user['user_id'])){
+                            //判断红包的雷数
+                            $bom_nums=$hongbaoModel->getBomNums($hongbao_id);
+                            $awordmoney=0;
+                            switch ($bom_nums){
+                                case 3:
+                                    $awordmoney=1888;
+                                    break;
+                                case 4:
+                                    $awordmoney=4888;
+                                    break;
+                                case 5:
+                                    $awordmoney=18800;
+                                    break;
+                                case 6:
+                                    $awordmoney=38800;
+                                    break;
+                                case 7:
+                                    $awordmoney=58800;
+                                    break;
+                                default:
+                                    $awordmoney=0;
+                                    break;
+                            }
+                            if($bom_nums > 2){
+                                $type='['.$bom_nums.' 雷]';
+                                $hbUser=D('Users')->getUserByUid($hongbao_info['user_id']);
+                                D('Users')->addmoney($hongbao_info['user_id'],$awordmoney,7);//奖励
+                                $this->awordnotify($hongbao_info,$hbUser,$type,$awordmoney);
+                            }
+
+                            //设置mysql红包为领取状态为完毕
+                            $hongbaoModel->sethongbaoOver($hongbao_id);
+                            break;
+                        }else{
+                            break;
+                        }
+                    }else{
+                        break;
+                    }
+
+                }
+            }
+
+        }
+    }
+
+    public function sendlist(){
+        $_GET['p']=$_POST['p'];
+        $Hb = D('Hongbao');
+        import('ORG.Util.Page'); // 导入分页类
+        $map=array();
+        $map['user_id']=$this->uid;
+        $count = $Hb->where($map)->count(); // 查询满足要求的总记录数
+        $data['totle']=$count;
+        $Page = new Page($count, 8); // 实例化分页类 传入总记录数和每页显示的记录数
+        //$pager = $Page->show(); // 分页显示输出
+        $list = $Hb->where($map)->order(array('creatime'=>'desc'))->limit($Page->firstRow . ',' . $Page->listRows)->select();
+        $data['current']=$Page->currentPage();
+        if($data['current']==1){
+            $sql="SELECT SUM(money) as totle FROM bao_hongbao WHERE user_id=".$this->uid;
+            $sum=$Hb->query($sql);
+            $data['sum']=$sum[0]['totle'];
+        }else{
+            $data['sum']='';
+        }
+
+        $data['list']=$list;
+        $this->ajaxReturn($data,'',1);
+
+    }
+    public function recivelist(){
+        $_GET['p']=$_POST['p'];
+        $Hb = D('Kickback');
+        import('ORG.Util.Page'); // 导入分页类
+        $map=array();
+        $map['user_id']=$this->uid;
+        $count = $Hb->where($map)->count(); // 查询满足要求的总记录数
+        $data['totle']=$count;
+        $Page = new Page($count, 8); // 实例化分页类 传入总记录数和每页显示的记录数
+        //$pager = $Page->show(); // 分页显示输出
+        $list = $Hb->where($map)->order(array('creatime'=>'desc'))->limit($Page->firstRow . ',' . $Page->listRows)->select();
+        $data['current']=$Page->currentPage();
+        if($data['current']==1){
+            $sql="SELECT SUM(money) as totle FROM bao_kickback WHERE user_id=".$this->uid;
+            $sum=$Hb->query($sql);
+            $data['sum']=$sum[0]['totle'];
+        }else{
+            $data['sum']='';
+        }
+
+        $data['list']=$list;
+        $this->ajaxReturn($data,'',1);
     }
 }
