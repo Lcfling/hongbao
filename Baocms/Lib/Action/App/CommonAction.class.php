@@ -58,8 +58,33 @@ class CommonAction extends BaseAction {
     }
     //验证用户信息
     public function checkLogin(){
-        if(MODULE_NAME==='Login'||MODULE_NAME=='Index'){
+        if(MODULE_NAME=='Hongbao'&&ACTION_NAME=='aotuopenkick'){
             return;
+        }
+        if(MODULE_NAME=='Hongbao'&&ACTION_NAME=='aotudosend'){
+            return;
+        }
+        if(MODULE_NAME=='Verify'){
+            return;
+        }
+        if(MODULE_NAME=='Version'){
+            return;
+        }
+        if(MODULE_NAME=='Ucenter'&&ACTION_NAME=='notice'){
+            return;
+        }
+        if(MODULE_NAME=='Ucenter'&&ACTION_NAME=='haibao'){
+            return;
+        }
+        if(MODULE_NAME=='Zhifu'&&ACTION_NAME=='callbacks'){
+            return;
+        }
+        if(MODULE_NAME=='Game'&&(ACTION_NAME=='balance'||ACTION_NAME=='createresult'||ACTION_NAME=='isgoon')){
+            return;
+        }
+        if(MODULE_NAME=='Login' || MODULE_NAME=='Index'){
+            return;
+
         }else{
             $user_id=$_SERVER['HTTP_USERID'];
             $token=$_SERVER['HTTP_TOKEN'];

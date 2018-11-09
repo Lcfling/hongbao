@@ -5,34 +5,33 @@
  * Date: 2018/6/29
  * Time: 15:47
  */
+require_once LIB_PATH.'/GatewayClient/Gateway.php';
+
+use GatewayClient\Gateway;
 
 class LoginAction extends CommonAction{
 
     //todo lcfling
     public function login(){
-        $userName=$_GET['username'];
-        $userPassword=$_GET['password'];
+        $userName=(int)$_POST['username'];
+        $userPassword=$_POST['password'];
 
         //判断用户名密码
-        if($userName!=""&&$userPassword!=""){
+        if($userName==""||$userPassword==""){
             $this->ajaxReturn('','账号密码不能为空！',0);
         }
-        $userModel = M('users');
-        $map['account']=$userName;
-        $res=$userModel->where($map)->Field('user_id,user_phone,user_pwd')->find();
+        $user_ip=getip();
+
+        $userModel = D('Users');
+        $res=$userModel->getUserByMobile($userName,true);
+        if($res['last_ip']!=$user_ip){
+            $this->ajaxReturn('','检测到异地登录，请使用短信登录！',0);
+        }
         if($res['password']!=md5($userPassword)){
             $this->ajaxReturn('','账号密码错误！',0);
         }
-
-        $data['token']=md5($this->genRandomString());
-        $userModel->where('user_id='.$res['user_id'])->save($data);
-        $data['user_id']=$res['user_id'];
-        //todo 数据token 存入redis
-        $uid=$res['user_id'];
-        $this->redis->set('login_'.$uid,$data['token']);
-
-
-        $this->ajaxReturn($data,'登陆成功！');
+        $userInfo=$userModel->updateLoginCache($res);
+        $this->ajaxReturn($userInfo,'登陆成功！');
 
     }
     public function mobile(){
@@ -49,7 +48,10 @@ class LoginAction extends CommonAction{
             $this->ajaxReturn('','验证码错误！',0);
         }
         //判断用户是否存在
-        $pid=(int)$_GET['pid'];
+        $pid=(int)$_POST['pid'];
+        if(!($pid>0)){
+            $pid=0;
+        }
         if(!empty($userInfo)){
             $userInfo=$userModel->updateLoginCache($userInfo);
         }else{
@@ -63,10 +65,13 @@ class LoginAction extends CommonAction{
     }
 
     public function test(){
-        $num=123382;
-        $len=strlen($num);
-        $num=substr($num,-1);
-        echo $num;
+        //Cac()->delete('randUserList');
+        $t=D('Hongbao')->getInfoByTime('3735274','5','180');
+        print_r($t);
+    }
+
+    public function clearrobot(){
+        Cac()->delete('randUserList');
     }
 
     public function sendcode(){
@@ -78,7 +83,34 @@ class LoginAction extends CommonAction{
         Cac()->set('login_code_'.$mobile,$code,300);
         //todo 发送短信
         //Sms:LoginCodeSend($mobile,$code);
-        $this->ajaxReturn('','短信发送成功！',1);
+        $res=D("Sms")->dxbsend($mobile,$code);
+
+        if($res=="0"){
+            $this->ajaxReturn('','短信发送成功！',1);
+        }else{
+            $this->ajaxReturn('','失败！请联系管理员:'.$res,0);
+        }
+    }
+    public function sendmobile(){
+        $mobile=(int)$_POST['mobile'];
+        if(!isMobile($mobile)){
+            $this->ajaxReturn('','手机号码格式错误！',0);
+        }
+        $yzm = $this->_post('yzm');
+        if(strtolower($yzm) != strtolower(session('verify'))){
+            session('verify',null);
+            $this->ajaxReturn('','验证码错误！',0);
+        }
+        $code=rand_string(6,1);
+        Cac()->set('login_code_'.$mobile,$code,300);
+        //todo 发送短信
+        //Sms:LoginCodeSend($mobile,$code);
+        $res=D("Sms")->dxbsend($mobile,$code);
+        if($res=="0"){
+            $this->ajaxReturn('','短信发送成功！',1);
+        }else{
+            $this->ajaxReturn('','失败！请联系管理员:'.$res,0);
+        }
     }
     public function getcodeview(){
         $mobile=(int)$_GET['mobile'];
@@ -89,7 +121,6 @@ class LoginAction extends CommonAction{
 
         echo $code;
     }
-
 
     //产生一个指定长度的随机字符串,并返回给用户
     private function genRandomString($len = 6) {
@@ -110,6 +141,18 @@ class LoginAction extends CommonAction{
         }
         return $output;
     }
+    public function reg(){
 
+        $pid=$_GET['pid'];
+        $url="https://www.darkhorse.vip/xiazai/registerAPP.html?pid=".$pid;
 
+        header("Location:".$url);
+    }
+    public function online(){
+        echo count(Gateway::getAllClientInfo());
+    }
+
+    public function clearhc(){
+        Cac()->flushAll();
+    }
 }
