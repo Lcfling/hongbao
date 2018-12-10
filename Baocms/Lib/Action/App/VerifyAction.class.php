@@ -6,6 +6,11 @@ class  VerifyAction extends CommonAction{
         import('ORG.Util.Image');
         Image::buildImageVerify(4,2,'png',60,30);
     }
+
+    public function mobile(){
+        import('ORG.Util.Image');
+        Image::buildImageVerify(4,2,'png',60,25);
+    }
     
     
     
