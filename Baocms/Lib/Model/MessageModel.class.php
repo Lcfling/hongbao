@@ -62,7 +62,6 @@ class MessageModel extends CommonModel{
        //$map['ifread']=0;//未读
        $list = $dbsql->where($map)->select();
        if($list['ifread']==0){
-
          $data['ifread']=1;//标记已读
         $dbsql->where($map)->save($data);
        }
