@@ -22,7 +22,8 @@ class MessageAction extends CommonAction
     }
 
 //阅读单条记录
-    public function readmessage($message_id){
+    public function readmessage(){
+        $message_id=$_POST['messageid'];
         $user_id=$this->uid;
         $users=D("Message");
         $data= $users->readmessage($message_id);
